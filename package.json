@@ -1,0 +1,22 @@
+{
+  "name": "my-attendance",
+  "version": "1.0.0",
+  "description": "Serverless HTTP API",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "deploy": "export STAGE=prod && serverless deploy --stage prod --aws-profile attendance-system",
+    "deploy:dev": "export STAGE=prod && serverless deploy --stage dev --aws-profile attendance-system",
+    "dev": "export STAGE=dev && serverless offline --functionCleanupIdleTimeSeconds 0.5 --httpPort 8081",
+    "dynamodb": "export DYNAMO_ENDPOINT=http://localhost:8392 && dynamodb-admin"
+  },
+  "dependencies": {
+    "serverless-offline": "^9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20",
+    "serverless-python-requirements": "^6.0.0",
+    "serverless-s3-local": "^0.6.22"
+  },
+  "main": "index.js"
+}

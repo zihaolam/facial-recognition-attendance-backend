@@ -1,0 +1,163 @@
+org: zihaolam
+app: my-attendance
+service: my-attendance
+frameworkVersion: "3"
+
+useDotenv: true
+provider:
+  name: aws
+  region: ${env:REGION}
+  runtime: python3.8
+  httpApi:
+    cors: true
+    authorizers:
+      serviceAuthorizer:
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_yEK04vFNo
+        audience: 781fth57h6263h0rh5b98lbrgd
+  environment:
+    REGION: ${env:REGION}
+  iam:
+    role:
+      statements:
+        - Effect: Allow # note that these rights are given in the default policy and are required if you want logs out of your lambda(s)
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource:
+            - "Fn::Join":
+                - ":"
+                - - "arn:aws:logs"
+                  - Ref: "AWS::Region"
+                  - Ref: "AWS::AccountId"
+                  - "log-group:/aws/lambda/*:*:*"
+        # Allow functions to read/write objects in a bucket
+        - Effect: Allow
+          Action:
+            - "s3:GetObject"
+            - "s3:PutObject"
+          Resource:
+            - "arn:aws:s3:::my-bucket-name/*"
+        - Effect: "Allow"
+          Action:
+            - dynamodb:*
+          Resource:
+            Fn::Sub: "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${self:custom.ddbTableName}"
+
+plugins:
+  - serverless-offline
+  - serverless-s3-local
+  - serverless-python-requirements
+
+custom:
+  ddbTableName: "ab3-attendance-main-table"
+  bucketName: "ab3-attendance-user-bucket"
+  serverless-offline:
+    host: localhost
+    directory: /tmp/local_s3
+    buckets: ${self:custom.bucketName}
+
+functions:
+  CreateUser:
+    handler: routes/user.create
+    timeout: 30
+    authorizer: serviceAuthorizer
+    events:
+      - httpApi:
+          path: /user
+          method: post
+
+  GetOneUser:
+    handler: routes/user.find_one
+    events:
+      - httpApi:
+          path: /user/{id}
+          method: get
+
+  GetUsers:
+    handler: routes/user.find_all
+    authorizer: serviceAuthorizer
+    events:
+      - httpApi:
+          path: /user
+          method: get
+
+  UpdateUser:
+    handler: routes/user.update
+    events:
+      - httpApi:
+          path: /user/{id}
+          method: put
+
+  DeleteUser:
+    handler: routes/user.delete
+    events:
+      - httpApi:
+          path: /user/{id}
+          method: delete
+
+  CreateAttendance:
+    handler: routes/attendance.create
+    timeout: 5
+    events:
+      - httpApi:
+          path: /attendance
+          method: post
+
+  GetAttendanceByUserId:
+    handler: routes/attendance.find_one
+    events:
+      - httpApi:
+          path: /attendance/{id}
+          method: get
+
+  GetAllAttendance:
+    handler: routes/attendance.find_all
+    events:
+      - httpApi:
+          path: /attendance
+          method: get
+
+  UpdateAttendance:
+    handler: routes/attendance.update
+    events:
+      - httpApi:
+          path: /attendance/{id}
+          method: put
+
+  DeleteAttendance:
+    handler: routes/attendance.delete
+    events:
+      - httpApi:
+          path: /attendance/{id}
+          method: delete
+
+  CreateEvent:
+    handler: routes/event.create
+    authorizer: serviceAuthorizer
+    events:
+      - httpApi:
+          path: /event
+          method: post
+
+  GetEvents:
+    handler: routes/event.find_all
+    events:
+      - httpApi:
+          path: /event
+          method: get
+
+  GetOneEvent:
+    handler: routes/event.find_one
+    events:
+      - httpApi:
+          path: /event/{id}
+          method: get
+
+resources:
+  Resources:
+    NewResource:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ab3-attendance-user-bucket
